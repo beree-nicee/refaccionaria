@@ -86,26 +86,41 @@ class Empleado extends Sistema {
                     (!empty($data['contrasena']) ? ", contrasena_hash = :pass " : "") . 
                     "WHERE id_usuario = :id_u";
             $paramsU = [':email' => $data['email'], ':id_u' => $id_usuario];
-            if(!empty($data['contrasena'])) $paramsU[':pass'] = md5($data['contrasena']);
+            if (!empty($data['contrasena'])) $paramsU[':pass'] = md5($data['contrasena']);
             $this->db->prepare($sqlU)->execute($paramsU);
 
-            // 2. Manejar Imagen Nueva
+            // 2. Manejar imagen nueva
             $fotografia = $actual['fotografia'];
             if (isset($_FILES['fotografia']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
-                if($fotografia) $this->eliminarImagen($fotografia, 'empleados');
+                if ($fotografia) $this->eliminarImagen($fotografia, 'empleados');
                 $fotografia = $this->subirImagen($_FILES['fotografia'], 'empleados');
             }
 
-            // 3. Actualizar Empleado
-            $sqlE = "UPDATE Empleado SET nombre=:nom, apellido_paterno=:ap1, apellido_materno=:ap2, 
-                     rfc=:rfc, curp=:curp, fecha_nacimiento=:fnac, fotografia=:foto, telefono=:tel 
-                     WHERE id_empleado = :id_e";
+            // 3. RFC y CURP: solo se actualizan si el usuario que edita
+            //    es admin Y está editando a OTRA persona (no su propio perfil)
+            $esPropio     = ((int)$actual['id_usuario'] === (int)$this->obtenerIdUsuario());
+            $puedeRFCCURP = $this->esAdmin() && !$esPropio;
+
+            $rfc  = $puedeRFCCURP ? ($data['rfc']  ?? null) : $actual['rfc'];
+            $curp = $puedeRFCCURP ? ($data['curp'] ?? null) : $actual['curp'];
+
+            // 4. Actualizar Empleado
+            $sqlE = "UPDATE Empleado SET 
+                        nombre           = :nom,
+                        apellido_paterno = :ap1,
+                        apellido_materno = :ap2,
+                        rfc              = :rfc,
+                        curp             = :curp,
+                        fecha_nacimiento = :fnac,
+                        fotografia       = :foto,
+                        telefono         = :tel
+                    WHERE id_empleado = :id_e";
             $this->db->prepare($sqlE)->execute([
                 ':nom'  => $data['nombre'],
                 ':ap1'  => $data['apellido_paterno'],
                 ':ap2'  => $data['apellido_materno'],
-                ':rfc'  => $data['rfc'],
-                ':curp' => $data['curp'],
+                ':rfc'  => $rfc,
+                ':curp' => $curp,
                 ':fnac' => $data['fecha_nacimiento'],
                 ':foto' => $fotografia,
                 ':tel'  => $data['telefono'],
@@ -114,6 +129,7 @@ class Empleado extends Sistema {
 
             $this->db->commit();
             return true;
+
         } catch (Exception $e) {
             $this->db->rollBack();
             throw $e;

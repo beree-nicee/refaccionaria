@@ -1,85 +1,100 @@
-<div class="container mt-4">
-    <div class="card">
+<?php
+$esEditar        = ($accion === 'actualizar');
+$esPropioCliente = $app->esCliente();
+?>
+<div class="container mt-4" style="max-width:700px">
+    <div class="card shadow">
         <div class="card-header bg-primary text-white">
-            <h4><?php echo ($accion == 'actualizar') ? 'Editar Cliente' : 'Nuevo Cliente'; ?></h4>
+            <h5 class="mb-0">
+                <i class="fas fa-<?= $esPropioCliente ? 'user-edit' : 'user' ?>"></i>
+                <?php
+                if ($esPropioCliente) echo 'Mi perfil';
+                elseif ($esEditar)    echo 'Editar cliente';
+                else                  echo 'Nuevo cliente';
+                ?>
+            </h5>
         </div>
         <div class="card-body">
-            <form action="cliente.php?accion=<?php echo $accion; echo ($accion == 'actualizar') ? '&id=' . $id : ''; ?>" 
-                  method="POST" 
-                  class="needs-validation" 
-                  novalidate>
-                
-                <div class="alert alert-info mb-3">
-                    <strong>* Campos obligatorios:</strong> Email, Contraseña, Nombre, Apellido Materno y Fecha de Nacimiento.
-                </div>
-                
-                <h5 class="border-bottom pb-2 mb-3">Datos de Cuenta</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Email *</label>
-                        <input type="email" name="email" class="form-control" 
-                               value="<?php echo $data['email'] ?? ''; ?>" required>
-                        <div class="invalid-feedback">Ingrese un correo válido</div>
+            <form action="cliente.php?accion=<?= $accion ?><?= $esEditar ? '&id='.$id : '' ?>"
+                  method="POST" class="needs-validation" novalidate>
+
+                <h6 class="border-bottom pb-2 mb-3 text-muted text-uppercase" style="font-size:.75rem;letter-spacing:.05em">
+                    Datos de acceso
+                </h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Correo electrónico <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control"
+                               value="<?= htmlspecialchars($data['email'] ?? '') ?>" required>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Contraseña <?php echo ($accion == 'crear') ? '*' : '(Vacío para no cambiar)'; ?></label>
-                        <input type="password" name="contrasena" class="form-control" 
-                               minlength="6" <?php echo ($accion == 'crear') ? 'required' : ''; ?>>
-                        <small class="text-muted">Mínimo 6 caracteres</small>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Contraseña
+                            <?= $esEditar ? '<small class="text-muted fw-normal">(vacío = no cambiar)</small>' : '<span class="text-danger">*</span>' ?>
+                        </label>
+                        <input type="password" name="contrasena" class="form-control"
+                               minlength="6" placeholder="Mínimo 6 caracteres"
+                               <?= !$esEditar ? 'required' : '' ?>>
                     </div>
                 </div>
 
-                <h5 class="border-bottom pb-2 mb-3 mt-3">Datos Personales</h5>
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Nombre(s) *</label>
-                        <input type="text" name="nombre" class="form-control" 
-                               value="<?php echo $data['nombre'] ?? ''; ?>" required>
+                <h6 class="border-bottom pb-2 mb-3 text-muted text-uppercase" style="font-size:.75rem;letter-spacing:.05em">
+                    Datos personales
+                </h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Nombre(s) <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" class="form-control"
+                               value="<?= htmlspecialchars($data['nombre'] ?? '') ?>" required>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Apellido Paterno</label>
-                        <input type="text" name="apellido_paterno" class="form-control" 
-                               value="<?php echo $data['apellido_paterno'] ?? ''; ?>">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Apellido paterno</label>
+                        <input type="text" name="apellido_paterno" class="form-control"
+                               value="<?= htmlspecialchars($data['apellido_paterno'] ?? '') ?>">
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Apellido Materno *</label>
-                        <input type="text" name="apellido_materno" class="form-control" 
-                               value="<?php echo $data['apellido_materno'] ?? ''; ?>" required>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Teléfono</label>
-                        <input type="tel" name="telefono" class="form-control" pattern="[0-9]{10}"
-                               placeholder="10 dígitos" value="<?php echo $data['telefono'] ?? ''; ?>">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Fecha de Nacimiento *</label>
-                        <input type="date" name="fecha_nacimiento" class="form-control" 
-                               value="<?php echo $data['fecha_nacimiento'] ?? ''; ?>" required>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Apellido materno <span class="text-danger">*</span></label>
+                        <input type="text" name="apellido_materno" class="form-control"
+                               value="<?= htmlspecialchars($data['apellido_materno'] ?? '') ?>" required>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label class="form-label">Dirección</label>
-                        <input type="text" name="direccion" class="form-control" 
-                               value="<?php echo $data['direccion'] ?? ''; ?>">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Teléfono</label>
+                        <input type="tel" name="telefono" class="form-control"
+                               pattern="[0-9]{10}" placeholder="10 dígitos"
+                               value="<?= htmlspecialchars($data['telefono'] ?? '') ?>">
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Ciudad</label>
-                        <input type="text" name="ciudad" class="form-control" 
-                               value="<?php echo $data['ciudad'] ?? ''; ?>">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Fecha de nacimiento <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha_nacimiento" class="form-control"
+                               value="<?= htmlspecialchars($data['fecha_nacimiento'] ?? '') ?>"
+                               max="<?= date('Y-m-d', strtotime('-16 years')) ?>" required>
                     </div>
                 </div>
-                
-                <div class="d-flex gap-2 mt-4">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Dirección</label>
+                        <input type="text" name="direccion" class="form-control"
+                               value="<?= htmlspecialchars($data['direccion'] ?? '') ?>"
+                               placeholder="Calle, número, colonia">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Ciudad</label>
+                        <input type="text" name="ciudad" class="form-control"
+                               value="<?= htmlspecialchars($data['ciudad'] ?? '') ?>">
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
                     <button type="submit" name="enviar" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar Cliente
+                        <i class="fas fa-save"></i>
+                        <?= $esPropioCliente ? 'Guardar cambios' : 'Guardar cliente' ?>
                     </button>
-                    <a href="cliente.php" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> Cancelar
+                    <a href="<?= $esPropioCliente ? 'index.php' : 'cliente.php' ?>" class="btn btn-secondary">
+                        Cancelar
                     </a>
                 </div>
             </form>
@@ -90,15 +105,11 @@
 <script>
 (function() {
     'use strict';
-    var forms = document.querySelectorAll('.needs-validation');
-    Array.prototype.slice.call(forms).forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
+    document.querySelectorAll('.needs-validation').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
             form.classList.add('was-validated');
-        }, false);
+        });
     });
 })();
 </script>
