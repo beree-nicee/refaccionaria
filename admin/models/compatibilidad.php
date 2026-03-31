@@ -12,6 +12,7 @@ class Compatibilidad extends Sistema {
         $stmt->execute([':id' => $id_refaccion]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+    
 
     public function crear($data) {
         $this->conectar();
