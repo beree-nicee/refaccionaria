@@ -92,6 +92,10 @@ switch ($accion) {
             </button>
         </form>
     </div>
+    <p class="text-center mt-3 mb-0 text-muted small">
+        ¿No tienes cuenta?
+        <a href="register.php" class="text-decoration-none fw-semibold">Regístrate aquí</a>
+    </p>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
