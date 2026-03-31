@@ -6,9 +6,14 @@ class Orden extends Sistema {
     function leer() {
         $this->conectar();
         
-        $sql = "SELECT o.*, u.nombre, u.apellidos, u.email 
+        $sql = "SELECT o.*, u.email,
+                       COALESCE(e.nombre, c.nombre, '') as nombre,
+                       COALESCE(CONCAT(e.apellido_paterno,' ',e.apellido_materno),
+                                CONCAT(c.apellido_paterno,' ',c.apellido_materno), '') as apellidos
                 FROM Orden_Compra o
-                INNER JOIN Usuario u ON o.id_usuario = u.id_usuario";
+                INNER JOIN Usuario u ON o.id_usuario = u.id_usuario
+                LEFT JOIN Empleado e ON u.id_usuario = e.id_usuario
+                LEFT JOIN Cliente  c ON u.id_usuario = c.id_usuario";
         
         // Cliente solo ve sus órdenes
         if ($this->esCliente()) {
@@ -31,9 +36,14 @@ class Orden extends Sistema {
     function leerUno($id) {
         $this->conectar();
         
-        $sql = "SELECT o.*, u.nombre, u.apellidos, u.email 
+        $sql = "SELECT o.*, u.email,
+                       COALESCE(e.nombre, c.nombre, '') as nombre,
+                       COALESCE(CONCAT(e.apellido_paterno,' ',e.apellido_materno),
+                                CONCAT(c.apellido_paterno,' ',c.apellido_materno), '') as apellidos
                 FROM Orden_Compra o
                 INNER JOIN Usuario u ON o.id_usuario = u.id_usuario
+                LEFT JOIN Empleado e ON u.id_usuario = e.id_usuario
+                LEFT JOIN Cliente  c ON u.id_usuario = c.id_usuario
                 WHERE o.id_orden = :id";
         
         $stmt = $this->db->prepare($sql);
@@ -206,7 +216,7 @@ class Orden extends Sistema {
     }
     
     function borrar($id) {
-        $this->validarAcceso('orden.eliminar');
+        $this->validarAcceso('orden_eliminar');
         $this->conectar();
         
         $sql = "DELETE FROM Orden_Compra WHERE id_orden = :id";
