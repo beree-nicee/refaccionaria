@@ -3,6 +3,7 @@ require_once(__DIR__."/sistema.class.php");
 require_once(__DIR__."/models/cita.php");
 
 $app = new Cita();
+$app->requiereLogin();
 $id = (isset($_GET['id'])) ? $_GET['id'] : null;
 $accion = (isset($_GET['accion'])) ? $_GET['accion'] : null;
 

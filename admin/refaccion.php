@@ -8,14 +8,17 @@ $app->requiereLogin();
 $id     = $_GET['id']     ?? null;
 $accion = $_GET['accion'] ?? null;
 
-// --- PROCESAMIENTO DE DATOS (POST) ---
+
 switch ($accion) {
     case 'crear':
         if (isset($_POST['enviar'])) {
             try {
                 $app->crear($_POST);
-                header("Location: refaccion.php?mensaje=1"); exit;
-            } catch (Exception $e) { $error = $e->getMessage(); }
+                header("Location: refaccion.php?mensaje=1"); 
+                exit;
+            } catch (Exception $e) { 
+                $error = $e->getMessage(); 
+            }
         }
         break;
 
@@ -23,39 +26,52 @@ switch ($accion) {
         if (isset($_POST['enviar'])) {
             try {
                 $app->actualizar($id, $_POST);
-                header("Location: refaccion.php?mensaje=2"); exit;
-            } catch (Exception $e) { $error = $e->getMessage(); }
+                header("Location: refaccion.php?mensaje=2"); 
+                exit;
+            } catch (Exception $e) { 
+                $error = $e->getMessage(); 
+            }
         }
         break;
 
     case 'borrar':
         try {
             $app->borrar($id);
-            header("Location: refaccion.php?mensaje=3"); exit;
-        } catch (Exception $e) { $error = $e->getMessage(); }
+            header("Location: refaccion.php?mensaje=3"); 
+            exit;
+        } catch (Exception $e) { 
+            $error = $e->getMessage(); 
+        }
         break;
 }
 
-// --- SALIDA DE VISTAS (HTML) ---
+// --- 2. PREPARACIÓN DE LA SALIDA (HTML) ---
 include_once(__DIR__."/views/header.php");
 
-// Alertas
-$msjs = ["1" => "Refacción agregada correctamente", "2" => "Refacción actualizada correctamente", "3" => "Refacción eliminada"];
+// Manejo de Alertas/Mensajes
+$msjs = [
+    "1" => "Refacción agregada correctamente",
+    "2" => "Refacción actualizada correctamente",
+    "3" => "Refacción eliminada"
+];
 if (isset($_GET['mensaje'])) $app->alerta("success", $msjs[$_GET['mensaje']]);
-if (isset($error)) $app->alerta("danger", $error);
+if (isset($error))           $app->alerta("danger",  $error);
 
-// Selección de vista
+// --- 3. SELECCIÓN DE VISTA Y CARGA DE DATOS ---
 switch ($accion) {
     case 'crear':
     case 'actualizar':
-        $data = ($accion === 'actualizar') ? $app->leerUno($id) : [];
+        // Cargamos datos básicos de la refacción y categorías
+        $data       = ($accion === 'actualizar') ? $app->leerUno($id) : [];
         $categorias = $app->obtenerCategorias();
         
-        // CARGA DE COMPATIBILIDADES SOLO SI ES ACTUALIZAR
+        // Lógica para Compatibilidades (Solo si estamos editando)
         $compatibilidades = []; 
-        if ($accion === 'actualizar') {
+        if ($accion === 'actualizar' && $id) {
+            // Importante: Cargamos el modelo de compatibilidad aquí
             require_once(__DIR__."/models/compatibilidad.php");
             $objComp = new Compatibilidad();
+            // Llenamos la variable que la tabla en 'formulario.php' necesita
             $compatibilidades = $objComp->leerPorRefaccion($id);
         }
         
@@ -63,9 +79,11 @@ switch ($accion) {
         break;
 
     default:
+        // Vista principal: Listado de refacciones
         $refacciones = $app->leer();
         require(__DIR__."/views/refaccionV/index.php");
         break;
 }
 
 include_once(__DIR__."/views/footer.php");
+?>

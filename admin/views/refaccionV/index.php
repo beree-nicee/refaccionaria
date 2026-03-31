@@ -1,7 +1,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="fas fa-cog"></i> Inventario de Refacciones</h2>
-        <?php if($app->verificarPermiso('refaccion.crear')): ?>
+        <?php if($app->verificarPermiso('refaccion_crear')): ?>
         <a href="refaccion.php?accion=crear" class="btn btn-success">
             <i class="fas fa-plus"></i> Nueva Refacción
         </a>
@@ -70,13 +70,13 @@
                         </td>
                         <td class="text-end pe-3">
                             <div class="btn-group btn-group-sm">
-                                <?php if($app->verificarPermiso('refaccion.editar')): ?>
+                                <?php if($app->verificarPermiso('refaccion_editar')): ?>
                                 <a href="refaccion.php?accion=actualizar&id=<?= $r['id_refaccion'] ?>"
                                    class="btn btn-warning" title="Editar">
                                    <i class="fas fa-edit"></i>
                                 </a>
                                 <?php endif; ?>
-                                <?php if($app->verificarPermiso('refaccion.eliminar')): ?>
+                                <?php if($app->verificarPermiso('refaccion_eliminar')): ?>
                                 <a href="refaccion.php?accion=borrar&id=<?= $r['id_refaccion'] ?>"
                                    class="btn btn-danger" title="Eliminar"
                                    onclick="return confirm('¿Eliminar esta refacción?')">

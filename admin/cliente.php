@@ -3,6 +3,7 @@ require_once(__DIR__."/sistema.class.php");
 require_once(__DIR__."/models/cliente.php");
 
 $app = new Cliente();
+$app->requiereLogin();
 $id = (isset($_GET['id'])) ? $_GET['id'] : null;
 $accion = (isset($_GET['accion'])) ? $_GET['accion'] : null;
 

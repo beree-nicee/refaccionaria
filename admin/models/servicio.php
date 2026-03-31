@@ -39,7 +39,7 @@ class Servicio extends Sistema {
     }
     
     function crear($data) {
-        //$this->validarAcceso('servicio.crear');
+        $this->validarAcceso('servicio_crear');
         $data = $this->sanitizar($data);
         
         // Validaciones
@@ -78,7 +78,7 @@ class Servicio extends Sistema {
     }
     
     function actualizar($id, $data) {
-        //$this->validarAcceso('servicio.actualizar');
+        $this->validarAcceso('servicio_editar');
         $data = $this->sanitizar($data);
         $this->conectar();
         
@@ -114,7 +114,7 @@ class Servicio extends Sistema {
     }
     
     function borrar($id) {
-        //$this->validarAcceso('servicio.eliminar');
+        $this->validarAcceso('servicio_eliminar');
         $this->conectar();
         
         $servicio = $this->leerUno($id);

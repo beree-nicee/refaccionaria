@@ -17,15 +17,15 @@
             </thead>
             <tbody>
                 <?php if(empty($compatibilidades)): ?>
-                    <tr><td colspan="4" class="text-center text-muted">No hay compatibilidades registradas</td></tr>
+                    <tr><td colspan="4" class="text-center">No hay registros</td></tr>
                 <?php else: foreach($compatibilidades as $c): ?>
                     <tr>
                         <td><strong><?php echo $c['marca_vehiculo']; ?></strong></td>
                         <td><?php echo $c['modelo_vehiculo']; ?></td>
                         <td class="text-center"><?php echo $c['anio_inicio'] . " - " . $c['anio_fin']; ?></td>
                         <td class="text-end">
-                            <a href="compatibilidad.php?accion=borrar&id=<?php echo $c['id_compatibilidad']; ?>&id_refaccion=<?php echo $id; ?>" 
-                               class="text-danger" onclick="return confirm('¿Quitar este vehículo?')">
+                            <a href="compatibilidad.php?accion=borrar&id=<?php echo $c['id_compatibilidad']; ?>" 
+                               class="text-danger" onclick="return confirm('¿Eliminar registro?')">
                                 <i class="fas fa-trash"></i>
                             </a>
                         </td>

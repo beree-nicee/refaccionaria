@@ -3,6 +3,7 @@ require_once(__DIR__."/sistema.class.php");
 require_once(__DIR__."/models/paquete.php");
 
 $app = new Paquete();
+$app->requiereLogin();
 $id = $_GET['id'] ?? null;
 $accion = $_GET['accion'] ?? null;
 

@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__."/models/empleado.php");
 $app = new Empleado();
+$app->requiereLogin();
 $id = $_GET['id'] ?? null;
 $accion = $_GET['accion'] ?? null;
 

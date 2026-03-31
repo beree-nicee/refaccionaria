@@ -1,7 +1,16 @@
 <?php
 require_once(__DIR__."/../sistema.class.php");
 class Compatibilidad extends Sistema {
-    
+
+
+    public function leerTodo() {
+        $this->conectar();
+        $sql = "SELECT * FROM Compatibilidad_Vehicular ORDER BY marca_vehiculo ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // Obtener todas las compatibilidades de una refacción
     public function leerPorRefaccion($id_refaccion) {
         $this->conectar();

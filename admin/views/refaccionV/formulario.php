@@ -158,3 +158,111 @@ document.getElementById('inputImagen').addEventListener('change', function() {
     reader.readAsDataURL(file);
 });
 </script>
+
+<?php if ($esEditar): ?>
+<!-- ===== SECCIÓN COMPATIBILIDAD ===== -->
+<div class="container mt-4 px-0">
+    <div class="card border-warning shadow-sm">
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-car"></i> Compatibilidad de Vehículos</h6>
+            <?php if($app->verificarPermiso('compatibilidad_gestionar')): ?>
+            <button type="button" class="btn btn-sm btn-dark"
+                    data-bs-toggle="modal" data-bs-target="#modalCompatibilidad">
+                <i class="fas fa-plus"></i> Agregar
+            </button>
+            <?php endif; ?>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th class="text-center">Años</th>
+                        <?php if($app->verificarPermiso('compatibilidad_gestionar')): ?>
+                        <th class="text-end">Eliminar</th>
+                        <?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($compatibilidades)): ?>
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                <i class="fas fa-car-side"></i> Sin compatibilidades registradas
+                            </td>
+                        </tr>
+                    <?php else: foreach ($compatibilidades as $c): ?>
+                        <tr>
+                            <td><strong><?= htmlspecialchars($c['marca_vehiculo']) ?></strong></td>
+                            <td><?= htmlspecialchars($c['modelo_vehiculo']) ?></td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">
+                                    <?= $c['anio_inicio'] ?> – <?= $c['anio_fin'] ?>
+                                </span>
+                            </td>
+                            <?php if($app->verificarPermiso('compatibilidad_gestionar')): ?>
+                            <td class="text-end pe-3">
+                                <a href="compatibilidad.php?accion=borrar&id=<?= $c['id_compatibilidad'] ?>&id_refaccion=<?= $data['id_refaccion'] ?>"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('¿Eliminar este vehículo compatible?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal agregar compatibilidad -->
+<?php if($app->verificarPermiso('compatibilidad_gestionar')): ?>
+<div class="modal fade" id="modalCompatibilidad" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="compatibilidad.php?accion=guardar" method="POST">
+                <input type="hidden" name="id_refaccion" value="<?= $data['id_refaccion'] ?>">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fas fa-car"></i> Nueva Compatibilidad</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Marca <span class="text-danger">*</span></label>
+                        <input type="text" name="marca_vehiculo" class="form-control"
+                               placeholder="Ej. NISSAN" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Modelo <span class="text-danger">*</span></label>
+                        <input type="text" name="modelo_vehiculo" class="form-control"
+                               placeholder="Ej. Sentra" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Año inicio</label>
+                            <input type="number" name="anio_inicio" class="form-control"
+                                   min="1990" max="<?= date('Y')+1 ?>"
+                                   placeholder="<?= date('Y')-5 ?>" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Año fin</label>
+                            <input type="number" name="anio_fin" class="form-control"
+                                   min="1990" max="<?= date('Y')+1 ?>"
+                                   placeholder="<?= date('Y') ?>" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" name="enviar" class="btn btn-warning text-dark">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+<?php endif; // fin $esEditar ?>
