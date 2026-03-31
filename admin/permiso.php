@@ -4,8 +4,7 @@ require_once(__DIR__."/models/permiso.php");
 
 $app    = new Permiso();
 $app->requiereLogin();
-
-$id     = $_GET['id']     ?? null;
+$id = $_GET['id']     ?? null;
 $accion = $_GET['accion'] ?? null;
 
 switch ($accion) {
