@@ -9,8 +9,8 @@ class Cliente extends Sistema {
         $sql = "SELECT c.*, u.email, r.rol
                 FROM Cliente c
                 INNER JOIN Usuario u ON c.id_usuario = u.id_usuario
-                INNER JOIN usuario_rol ur ON u.id_usuario = ur.id_usuario
-                INNER JOIN Rol r ON ur.id_rol = r.id_rol
+                LEFT JOIN usuario_rol ur ON u.id_usuario = ur.id_usuario
+                LEFT JOIN Rol r ON ur.id_rol = r.id_rol
                 ORDER BY c.id_cliente DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
@@ -40,25 +40,22 @@ class Cliente extends Sistema {
         $this->conectar();
         $data = $this->sanitizar($data);
 
-        // Validaciones previas a la transacción
         if (empty($data['nombre']))           throw new Exception("El nombre es obligatorio");
         if (empty($data['apellido_paterno'])) throw new Exception("El apellido paterno es obligatorio");
         if (empty($data['apellido_materno'])) throw new Exception("El apellido materno es obligatorio");
         if (empty($data['fecha_nacimiento'])) throw new Exception("La fecha de nacimiento es obligatoria");
         if (empty($data['email']))            throw new Exception("El correo es obligatorio");
         if (empty($data['contrasena']))       throw new Exception("La contraseña es obligatoria");
-        if ($data['contrasena'] !== ($data['confirmar_contrasena'] ?? '')) 
+        if ($data['contrasena'] !== ($data['confirmar_contrasena'] ?? ''))
             throw new Exception("Las contraseñas no coinciden");
 
-        // Verificar email único
         $stmt = $this->db->prepare("SELECT id_usuario FROM Usuario WHERE email = :email");
         $stmt->execute([':email' => $data['email']]);
         if ($stmt->fetch()) throw new Exception("Este correo ya está registrado");
 
-        // AHORA SÍ, INICIAMOS TRANSACCIÓN
         $this->db->beginTransaction();
         try {
-            $id_rol = $this->obtenerIdRolCliente();
+            $id_rol          = $this->obtenerIdRolCliente();
             $contrasena_hash = md5($data['contrasena']);
 
             // 1. Crear Usuario
@@ -73,23 +70,17 @@ class Cliente extends Sistema {
             ]);
             $id_usuario = $this->db->lastInsertId();
 
-            // 2. Insertar en tabla usuario_rol (CRÍTICO PARA EL LOGIN)
-            // Tu esquema define PK como (id_rol, id_usuario)
-            $stmtUR = $this->db->prepare("INSERT INTO usuario_rol (id_rol, id_usuario) VALUES (:id_rol, :id_usuario)");
-            $stmtUR->execute([
-                ':id_rol'     => $id_rol,
-                ':id_usuario' => $id_usuario
-            ]);
+            // 2. Insertar en usuario_rol
+            $this->db->prepare("INSERT INTO usuario_rol (id_rol, id_usuario) VALUES (:id_rol, :id_usuario)")
+                ->execute([':id_rol' => $id_rol, ':id_usuario' => $id_usuario]);
 
             // 3. Crear Cliente
-            $stmt = $this->db->prepare(
+            $this->db->prepare(
                 "INSERT INTO Cliente
                     (id_usuario, nombre, apellido_paterno, apellido_materno,
                      fecha_nacimiento, telefono, direccion, ciudad)
-                 VALUES
-                    (:id_usuario, :nombre, :ap, :am, :fn, :tel, :dir, :ciu)"
-            );
-            $stmt->execute([
+                 VALUES (:id_usuario, :nombre, :ap, :am, :fn, :tel, :dir, :ciu)"
+            )->execute([
                 ':id_usuario' => $id_usuario,
                 ':nombre'     => $data['nombre'],
                 ':ap'         => $data['apellido_paterno'],
@@ -110,12 +101,89 @@ class Cliente extends Sistema {
             ];
 
         } catch (Exception $e) {
-            if ($this->db->inTransaction()) {
-                $this->db->rollBack();
-            }
+            if ($this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
     }
-    
-    // ... (mantén tus funciones crear, actualizar y borrar)
+
+    function crear($data) {
+        $this->validarAcceso('cliente_crear');
+        $data['confirmar_contrasena'] = $data['contrasena'];
+        return $this->registrar($data);
+    }
+
+    function actualizar($id_cliente, $data) {
+        $this->validarAcceso('cliente_editar');
+        $this->conectar();
+        $this->db->beginTransaction();
+
+        try {
+            $actual     = $this->leerUno($id_cliente);
+            if (!$actual) throw new Exception("Cliente no encontrado");
+            $id_usuario = $actual['id_usuario'];
+
+            // Actualizar email si cambió
+            if ($actual['email'] !== $data['email']) {
+                $chk = $this->db->prepare(
+                    "SELECT id_usuario FROM Usuario WHERE email = :email AND id_usuario != :id"
+                );
+                $chk->execute([':email' => $data['email'], ':id' => $id_usuario]);
+                if ($chk->fetch()) throw new Exception("El email ya está registrado");
+
+                $this->db->prepare("UPDATE Usuario SET email = :email WHERE id_usuario = :id")
+                    ->execute([':email' => $data['email'], ':id' => $id_usuario]);
+            }
+
+            // Actualizar contraseña si se envió
+            if (!empty($data['contrasena'])) {
+                $this->db->prepare("UPDATE Usuario SET contrasena_hash = :h WHERE id_usuario = :id")
+                    ->execute([':h' => md5($data['contrasena']), ':id' => $id_usuario]);
+            }
+
+            // Actualizar datos del cliente
+            $this->db->prepare(
+                "UPDATE Cliente SET
+                    nombre           = :nom,
+                    apellido_paterno = :ap,
+                    apellido_materno = :am,
+                    fecha_nacimiento = :fn,
+                    telefono         = :tel,
+                    direccion        = :dir,
+                    ciudad           = :ciu
+                 WHERE id_cliente = :id"
+            )->execute([
+                ':nom' => $data['nombre'],
+                ':ap'  => $data['apellido_paterno'],
+                ':am'  => $data['apellido_materno'],
+                ':fn'  => $data['fecha_nacimiento'],
+                ':tel' => $data['telefono']  ?? null,
+                ':dir' => $data['direccion'] ?? null,
+                ':ciu' => $data['ciudad']    ?? null,
+                ':id'  => $id_cliente,
+            ]);
+
+            $this->db->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    function borrar($id_cliente) {
+        $this->validarAcceso('cliente_eliminar');
+        $this->conectar();
+        $stmt = $this->db->prepare("DELETE FROM Cliente WHERE id_cliente = :id");
+        $stmt->execute([':id' => $id_cliente]);
+        return $stmt->rowCount();
+    }
+
+    function obtenerRoles() {
+        $this->conectar();
+        $stmt = $this->db->prepare("SELECT * FROM Rol ORDER BY rol");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
+?>

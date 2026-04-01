@@ -1,123 +1,144 @@
+<?php
+$esEditar   = ($accion === 'actualizar');
+$carpeta    = ($data['carpeta_foto'] ?? 'empleados');
+$avatar = !empty($data['fotografia'])
+    ? "../uploads/{$carpeta}/" . htmlspecialchars($data['fotografia'])
+    : "../images/default-avatar.jpg";
+?>
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
                 <div class="card-header bg-dark text-white">
-                    <h4><?php echo ($accion == 'actualizar') ? 'Editar Usuario' : 'Nuevo Usuario'; ?></h4>
+                    <h5 class="mb-0">
+                        <i class="fas fa-<?= $esEditar ? 'user-edit' : 'user-plus' ?>"></i>
+                        <?= $esEditar ? 'Editar Usuario' : 'Nuevo Usuario' ?>
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <form action="usuario.php?accion=<?php echo $accion; echo ($accion == 'actualizar') ? '&id=' . $id : ''; ?>" 
-                          method="POST" 
-                          class="needs-validation" 
-                          novalidate>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nombre *</label>
-                                <input type="text" 
-                                       name="nombre" 
-                                       class="form-control" 
-                                       value="<?php echo $data['nombre'] ?? ''; ?>" 
-                                       required>
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Apellidos *</label>
-                                <input type="text" 
-                                       name="apellidos" 
-                                       class="form-control" 
-                                       value="<?php echo trim(($data['apellido_paterno'] ?? '') . ' ' . ($data['apellido_materno'] ?? '')); ?>">
 
-                                 
+                    <?php if ($esEditar): ?>
+                    <div class="text-center mb-4">
+                        <img src="<?= $avatar ?>"
+                             alt="Avatar"
+                             class="rounded-circle border shadow-sm"
+                             style="width:90px;height:90px;object-fit:cover"
+                             onerror="this.src='../images/default-avatar.jpg'"
+                             id="avatarPreview">
+                        <p class="text-muted small mt-2 mb-0">
+                            <?= htmlspecialchars($data['nombre'] ?? '') ?>
+                            <span class="badge bg-secondary ms-1">
+                                <?= htmlspecialchars($data['nombre_rol'] ?? '') ?>
+                            </span>
+                        </p>
+                    </div>
+                    <?php endif; ?>
+
+                    <form action="usuario.php?accion=<?= $accion ?><?= $esEditar ? '&id='.$id : '' ?>"
+                          method="POST" enctype="multipart/form-data"
+                          class="needs-validation" novalidate>
+
+                        <!-- Datos personales -->
+                        <h6 class="border-bottom pb-2 mb-3 text-muted text-uppercase"
+                            style="font-size:.75rem;letter-spacing:.05em">
+                            Datos personales
+                        </h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Nombre(s)</label>
+                                <input type="text" name="nombre" class="form-control"
+                                       value="<?= htmlspecialchars($data['nombre'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Apellido paterno</label>
+                                <input type="text" name="apellido_paterno" class="form-control"
+                                       value="<?= htmlspecialchars($data['apellido_paterno'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Apellido materno</label>
+                                <input type="text" name="apellido_materno" class="form-control"
+                                       value="<?= htmlspecialchars($data['apellido_materno'] ?? '') ?>">
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Email *</label>
-                            <input type="email" 
-                                   name="email" 
-                                   class="form-control" 
-                                   value="<?php echo $data['email'] ?? ''; ?>" 
-                                   required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">
-                                Contraseña 
-                                <?php echo ($accion == 'actualizar') ? '(Dejar vacío para no cambiar)' : '*'; ?>
-                            </label>
-                            <input type="password" 
-                                   name="contrasena" 
-                                   class="form-control" 
-                                   minlength="6"
-                                   <?php echo ($accion == 'crear') ? 'required' : ''; ?>>
-                            <small class="text-muted">Mínimo 6 caracteres</small>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Teléfono</label>
-                            <input type="tel" 
-                                   name="telefono" 
-                                   class="form-control" 
-                                   pattern="[0-9]{10}"
-                                   placeholder="10 dígitos"
-                                   value="<?php echo $data['telefono'] ?? ''; ?>">
-                        </div>
-                        
-                
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <input type="text" 
-                                   name="direccion" 
-                                   class="form-control" 
-                                   value="<?php echo $data['direccion'] ?? ''; ?>">
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Ciudad</label>
-                                <input type="text" 
-                                       name="ciudad" 
-                                       class="form-control" 
-                                       value="<?php echo $data['ciudad'] ?? ''; ?>">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Teléfono</label>
+                                <input type="tel" name="telefono" class="form-control"
+                                       value="<?= htmlspecialchars($data['telefono'] ?? '') ?>"
+                                       placeholder="10 dígitos">
                             </div>
-                            
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">Estado</label>
-                                <input type="text" 
-                                       name="estado" 
-                                       class="form-control" 
-                                       value="<?php echo $data['estado'] ?? ''; ?>">
+                            <?php if ($esEditar): ?>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Fotografía</label>
+                                <input type="file" name="fotografia" class="form-control"
+                                       accept="image/*" id="inputFoto">
+                                <small class="text-muted">Sube una nueva para reemplazar la actual</small>
                             </div>
-                            
-                            <div class="col-md-3 mb-3">
-                                <label class="form-label">C.P.</label>
-                                <input type="text" 
-                                       name="codigo_postal" 
-                                       class="form-control" 
-                                       pattern="[0-9]{5}"
-                                       value="<?php echo $data['codigo_postal'] ?? ''; ?>">
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Datos de acceso -->
+                        <h6 class="border-bottom pb-2 mb-3 text-muted text-uppercase"
+                            style="font-size:.75rem;letter-spacing:.05em">
+                            Datos de acceso
+                        </h6>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" name="email" class="form-control"
+                                       value="<?= htmlspecialchars($data['email'] ?? '') ?>" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Contraseña
+                                    <?= $esEditar
+                                        ? '<small class="text-muted fw-normal">(vacío = no cambiar)</small>'
+                                        : '<span class="text-danger">*</span>' ?>
+                                </label>
+                                <input type="password" name="contrasena" class="form-control"
+                                       placeholder="Mínimo 6 caracteres"
+                                       <?= !$esEditar ? 'required minlength="6"' : '' ?>>
                             </div>
                         </div>
-                        
-                        <?php if($app->esAdmin()): ?>
-                        <div class="mb-3">
-                            <label class="form-label">Rol</label>
-                            <select name="rol" class="form-select">
-                                <option value="cliente" <?php echo (($data['rol'] ?? '') == 'cliente') ? 'selected' : ''; ?>>Cliente</option>
-                                <option value="tecnico" <?php echo (($data['rol'] ?? '') == 'tecnico') ? 'selected' : ''; ?>>Técnico</option>
-                                <option value="admin" <?php echo (($data['rol'] ?? '') == 'admin') ? 'selected' : ''; ?>>Administrador</option>
-                            </select>
+
+                        <!-- Rol y estado (solo admin) -->
+                        <?php if ($app->esAdmin()): ?>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Rol</label>
+                                <select name="id_rol" class="form-select">
+                                    <?php foreach ($roles as $r): ?>
+                                    <option value="<?= $r['id_rol'] ?>"
+                                        <?= ($data['id_rol'] ?? '') == $r['id_rol'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($r['rol']) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php if ($esEditar): ?>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Estado de cuenta</label>
+                                <select name="estado_cuenta" class="form-select">
+                                    <?php foreach (['activa','suspendida','eliminada'] as $est): ?>
+                                    <option value="<?= $est ?>"
+                                        <?= ($data['estado_cuenta'] ?? 'activa') === $est ? 'selected' : '' ?>>
+                                        <?= ucfirst($est) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <?php endif; ?>
-                        
+
                         <div class="d-flex gap-2">
                             <button type="submit" name="enviar" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Guardar
                             </button>
-                            <a href="usuario.php" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancelar
-                            </a>
+                            <a href="usuario.php" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>
@@ -127,18 +148,20 @@
 </div>
 
 <script>
-// Validación Bootstrap
-(function() {
-    'use strict';
-    var forms = document.querySelectorAll('.needs-validation');
-    Array.prototype.slice.call(forms).forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        }, false);
+document.getElementById('inputFoto')?.addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('avatarPreview').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+document.querySelectorAll('.needs-validation').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+        form.classList.add('was-validated');
     });
-})();
+});
 </script>

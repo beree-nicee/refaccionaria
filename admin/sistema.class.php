@@ -131,12 +131,12 @@ class Sistema {
         if (empty($archivo['name']) || $archivo['error'] !== UPLOAD_ERR_OK) {
             return null;
         }
-        // usar web para practicar, después quitar web y poner jpg, jpeg, png, gif
+
         $extensionesPermitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
         
         if (!in_array($extension, $extensionesPermitidas)) {
-            throw new Exception("Formato no permitido. Use: " . implode(', ', $extensionesPermitidas));
+            throw new Exception("Formato no permitido.");
         }
         
         if ($archivo['size'] > 5 * 1024 * 1024) {
@@ -144,23 +144,62 @@ class Sistema {
         }
         
         $nombreArchivo = uniqid() . '_' . time() . '.' . $extension;
-        $rutaDestino = __DIR__ . "/uploads/{$carpeta}/" . $nombreArchivo;
         
-        if (!is_dir(dirname($rutaDestino))) {
-            mkdir(dirname($rutaDestino), 0755, true);
+        // CORRECCIÓN DE RUTA: __DIR__ ya incluye "admin", así que entramos directo a uploads
+        $directorioDestino = __DIR__ . "/../uploads/{$carpeta}/";
+        $rutaDestino = $directorioDestino . $nombreArchivo;
+        
+        // Crear carpeta si no existe
+        if (!is_dir($directorioDestino)) {
+            mkdir($directorioDestino, 0777, true);
         }
         
         if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
+            // Intentar dar permisos al archivo recién creado
+            chmod($rutaDestino, 0666); 
             return $nombreArchivo;
         }
         
-        throw new Exception("Error al subir imagen");
+        throw new Exception("Error al mover el archivo a: " . $directorioDestino);
+    }
+
+    function subirImagenConNombre($archivo, $carpeta, $nombreBase) {
+        if (empty($archivo['name']) || $archivo['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $extensionesPermitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($extension, $extensionesPermitidas)) {
+            throw new Exception("Formato no permitido.");
+        }
+
+        if ($archivo['size'] > 5 * 1024 * 1024) {
+            throw new Exception("La imagen excede 5MB");
+        }
+
+        // Nombre limpio basado en el nombre de la refacción
+        $nombreArchivo     = $nombreBase . '.' . $extension;
+        $directorioDestino = __DIR__ . "/../uploads/{$carpeta}/";
+        $rutaDestino       = $directorioDestino . $nombreArchivo;
+
+        if (!is_dir($directorioDestino)) {
+            mkdir($directorioDestino, 0777, true);
+        }
+
+        if (move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
+            chmod($rutaDestino, 0666);
+            return $nombreArchivo;
+        }
+
+        throw new Exception("Error al mover el archivo.");
     }
     
     function eliminarImagen($nombreArchivo, $carpeta = 'productos') {
         if (empty($nombreArchivo)) return false;
         
-        $rutaArchivo = __DIR__ . "/uploads/{$carpeta}/" . $nombreArchivo;
+        $rutaArchivo = __DIR__ . "/../uploads/{$carpeta}/" . $nombreArchivo;
         
         if (file_exists($rutaArchivo)) {
             return unlink($rutaArchivo);
@@ -256,4 +295,3 @@ class Sistema {
 
     
 }
-?>

@@ -2,307 +2,221 @@
 require_once(__DIR__."/../sistema.class.php");
 
 class Usuario extends Sistema {
-    
+
     function leer() {
-        //$this->validarAcceso('usuario.leer');
+        $this->validarAcceso('usuario_leer');
         $this->conectar();
         $sql = "SELECT u.id_usuario, u.email, u.id_rol, u.estado_cuenta, u.fecha_registro,
-                COALESCE(e.nombre, c.nombre) as nombre, 
-                COALESCE(e.telefono, c.telefono) as telefono,
-                COALESCE(CONCAT(e.apellido_paterno, ' ', e.apellido_materno), 
-                         CONCAT(c.apellido_paterno, ' ', c.apellido_materno)) as apellidos,
-                r.rol as nombre_rol
+                    COALESCE(e.nombre, c.nombre, '') as nombre,
+                    COALESCE(e.telefono, c.telefono, '') as telefono,
+                    COALESCE(
+                        CONCAT(e.apellido_paterno, ' ', e.apellido_materno),
+                        CONCAT(c.apellido_paterno, ' ', c.apellido_materno), ''
+                    ) as apellidos,
+                    COALESCE(e.fotografia, c.fotografia, '') as fotografia,
+                    CASE WHEN e.id_empleado IS NOT NULL THEN 'empleados' ELSE 'clientes' END as carpeta_foto,
+                    e.rfc,
+                    e.id_empleado,
+                    c.id_cliente,
+                    r.rol as nombre_rol
                 FROM Usuario u
                 LEFT JOIN Empleado e ON u.id_usuario = e.id_usuario
-                LEFT JOIN Cliente c ON u.id_usuario = c.id_usuario
+                LEFT JOIN Cliente  c ON u.id_usuario = c.id_usuario
                 INNER JOIN Rol r ON u.id_rol = r.id_rol
-                WHERE u.estado_cuenta != 'eliminada' 
+                WHERE u.estado_cuenta != 'eliminada'
                 ORDER BY u.fecha_registro DESC";
-        //$sql = "SELECT * FROM Usuario WHERE estado_cuenta != 'eliminada' ORDER BY fecha_registro DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    
     function obtenerRoles() {
         $this->conectar();
-        $sql = "SELECT * FROM Rol ORDER BY rol";
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare("SELECT * FROM Rol ORDER BY rol");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
+
     function leerUno($id) {
-        // Puede ver su propio perfil o ser admin
-        //if ($_SESSION['id_usuario'] != $id && !$this->esAdmin()) {
-          //  throw new Exception("No tienes permiso");
-        //}
-        
         $this->conectar();
-        //$sql = "SELECT * FROM Usuario WHERE id_usuario = :id";
-        $sql = "SELECT 
-                u.id_usuario, 
-                u.email,          -- Antes decía u.correo, cámbialo a u.email
-                u.contrasena_hash, -- Verifica si es 'contrasena' o 'contrasena_hash' según tu DB
-                u.id_rol,
-                COALESCE(e.nombre, c.nombre) as nombre, 
-                COALESCE(e.apellido_paterno, c.apellido_paterno) as apellido_paterno,
-                COALESCE(e.apellido_materno, c.apellido_materno) as apellido_materno,
-                COALESCE(e.telefono, c.telefono) as telefono
-            FROM Usuario u
-            LEFT JOIN Empleado e ON u.id_usuario = e.id_usuario
-            LEFT JOIN Cliente c ON u.id_usuario = c.id_usuario
-            WHERE u.id_usuario = :id";
+        $sql = "SELECT u.id_usuario, u.email, u.id_rol, u.estado_cuenta,
+                    COALESCE(e.nombre, c.nombre, '') as nombre,
+                    COALESCE(e.apellido_paterno, c.apellido_paterno, '') as apellido_paterno,
+                    COALESCE(e.apellido_materno, c.apellido_materno, '') as apellido_materno,
+                    COALESCE(e.telefono, c.telefono, '') as telefono,
+                    COALESCE(e.fotografia, c.fotografia, '') as fotografia,
+                    CASE WHEN e.id_empleado IS NOT NULL THEN 'empleados' ELSE 'clientes' END as carpeta_foto,
+                    e.rfc,
+                    e.id_empleado,
+                    c.id_cliente,
+                    r.rol as nombre_rol
+                FROM Usuario u
+                LEFT JOIN Empleado e ON u.id_usuario = e.id_usuario
+                LEFT JOIN Cliente  c ON u.id_usuario = c.id_usuario
+                INNER JOIN Rol r ON u.id_rol = r.id_rol
+                WHERE u.id_usuario = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':id' => $id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-    
+
     function crear($data) {
+        $this->validarAcceso('usuario_crear');
         $this->conectar();
-        $this->db->beginTransaction(); 
-        
-        try{
-            $data = $this->sanitizar($data);
-            // Validaciones
-            if (!$this->validarEmail($data['email'])) {
-                throw new Exception("Email inválido");
-            }
-            if ($this->emailExiste($data['email'])) {
-                throw new Exception("El email ya está registrado");
-            }
-            if (strlen($data['contrasena']) < 2) {
-                throw new Exception("La contraseña debe tener al menos 2 caracteres");
-            }
-
-            $hash = md5($data['contrasena']);
-            $sql = "INSERT INTO Usuario (email, contrasena_hash, id_rol) 
-                    VALUES (:email, :hash, :id_rol)";
-            
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
-                ':email' => $data['email'],
-                ':hash' => $hash,
-                ':id_rol' => $data['id_rol'] ?? null
-            ]);
-
-            $id_usuario = $this->db->lastInsertId();
-
-        } catch (Exception $e) {
-            $this->db->rollBack();
-            throw $e;
-        }
-    
-        
-      
-        return $stmt->rowCount();
-    }
-    /*
-    function actualizar($id, $data) {
-        if ($_SESSION['id_usuario'] != $id && !$this->esAdmin()) {
-            throw new Exception("No tienes permiso");
-        }
-        
-        $data = $this->sanitizar($data);
-        $this->conectar();
-        
-        $campos = [];
-        $params = [':id' => $id];
-        
-        if (!empty($data['nombre'])) {
-            $campos[] = "nombre = :nombre";
-            $params[':nombre'] = $data['nombre'];
-        }
-        
-        if (!empty($data['apellidos'])) {
-            $campos[] = "apellidos = :apellidos";
-            $params[':apellidos'] = $data['apellidos'];
-        }
-        
-        if (!empty($data['telefono'])) {
-            $campos[] = "telefono = :telefono";
-            $params[':telefono'] = $data['telefono'];
-        }
-        
-        if (isset($data['direccion'])) {
-            $campos[] = "direccion = :direccion";
-            $params[':direccion'] = $data['direccion'];
-        }
-        
-        if (isset($data['ciudad'])) {
-            $campos[] = "ciudad = :ciudad";
-            $params[':ciudad'] = $data['ciudad'];
-        }
-        
-        if (isset($data['estado'])) {
-            $campos[] = "estado = :estado";
-            $params[':estado'] = $data['estado'];
-        }
-        
-        if (isset($data['codigo_postal'])) {
-            $campos[] = "codigo_postal = :codigo_postal";
-            $params[':codigo_postal'] = $data['codigo_postal'];
-        }
-        
-        if (!empty($data['contrasena'])) {
-            $campos[] = "contrasena_hash = :hash";
-            $params[':hash'] = md5($data['contrasena']);
-        }
-        
-        // Solo admin puede cambiar rol
-        if ($this->esAdmin() && isset($data['rol'])) {
-            $campos[] = "rol = :rol";
-            $params[':rol'] = $data['rol'];
-        }
-        
-        if (empty($campos)) return 0;
-        
-        $sql = "UPDATE Usuario SET " . implode(', ', $campos) . " WHERE id_usuario = :id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        
-        return $stmt->rowCount();
-    }
-    */
-    function actualizar($id, $data) {
-        $this->conectar();
-        $this->db->beginTransaction(); // Iniciamos transacción por seguridad
-
+        $this->db->beginTransaction();
         try {
             $data = $this->sanitizar($data);
+            if (!$this->validarEmail($data['email']))
+                throw new Exception("Email inválido");
+            if ($this->emailExiste($data['email']))
+                throw new Exception("El email ya está registrado");
+            if (strlen($data['contrasena'] ?? '') < 6)
+                throw new Exception("La contraseña debe tener al menos 6 caracteres");
 
-            // 1. Actualizar datos en la tabla 'usuario' (Email y Password)
+            $stmt = $this->db->prepare(
+                "INSERT INTO Usuario (email, contrasena_hash, id_rol)
+                 VALUES (:email, :hash, :id_rol)"
+            );
+            $stmt->execute([
+                ':email'  => $data['email'],
+                ':hash'   => md5($data['contrasena']),
+                ':id_rol' => $data['id_rol'] ?? null,
+            ]);
+            $this->db->commit();
+            return $stmt->rowCount();
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    function actualizar($id, $data) {
+        $this->validarAcceso('usuario_editar');
+        $this->conectar();
+        $data = $this->sanitizar($data);
+
+        // Obtener datos actuales ANTES de la transacción
+        $actual = $this->leerUno($id);
+
+        $esEmpleado = !empty($actual['id_empleado']);
+        $esCliente  = !empty($actual['id_cliente']);
+
+        // Manejar fotografía fuera de la transacción
+        $fotografia = !empty($actual['fotografia']) ? $actual['fotografia'] : null;
+        if (!empty($_FILES['fotografia']['name']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
+            if ($fotografia) $this->eliminarImagen($fotografia, $actual['carpeta_foto']);
+
+            if ($esEmpleado && !empty($actual['rfc'])) {
+                $nombreBase = preg_replace('/[^a-zA-Z0-9]/', '_', strtoupper($actual['rfc']));
+            } elseif ($esCliente) {
+                $nombreBase = 'cliente_' . $actual['id_cliente'];
+            } else {
+                $nombreBase = 'usuario_' . $id;
+            }
+
+            $carpeta    = $esEmpleado ? 'empleados' : 'clientes';
+            $fotografia = $this->subirImagenConNombre($_FILES['fotografia'], $carpeta, $nombreBase);
+        }
+
+        $this->db->beginTransaction();
+        try {
+            // 1. Actualizar tabla Usuario
             $camposU = [];
             $paramsU = [':id' => $id];
 
-            if (!empty($data['email'])) {
-                $camposU[] = "correo = :correo"; // Según tu imagen la columna es 'correo'
-                $paramsU[':correo'] = $data['email'];
+            if (!empty($data['email']) && $data['email'] !== $actual['email']) {
+                if ($this->emailExiste($data['email'], $id))
+                    throw new Exception("El email ya está registrado");
+                $camposU[] = "email = :email";
+                $paramsU[':email'] = $data['email'];
             }
             if (!empty($data['contrasena'])) {
-                $camposU[] = "contrasena = :hash";
+                $camposU[] = "contrasena_hash = :hash";
                 $paramsU[':hash'] = md5($data['contrasena']);
             }
-            if ($this->esAdmin() && isset($data['id_rol'])) {
+            if ($this->esAdmin() && !empty($data['id_rol'])) {
                 $camposU[] = "id_rol = :id_rol";
                 $paramsU[':id_rol'] = $data['id_rol'];
             }
 
             if (!empty($camposU)) {
-                $sqlU = "UPDATE usuario SET " . implode(', ', $camposU) . " WHERE id_usuario = :id";
-                $this->db->prepare($sqlU)->execute($paramsU);
+                $this->db->prepare(
+                    "UPDATE Usuario SET " . implode(', ', $camposU) . " WHERE id_usuario = :id"
+                )->execute($paramsU);
             }
 
-            // 2. Separar apellidos (el formulario manda uno, la DB tiene dos)
-            $apellidos = explode(' ', $data['apellidos'] ?? '', 2);
-            $apPaterno = $apellidos[0] ?? '';
-            $apMaterno = $apellidos[1] ?? '';
+            // 2. Conservar datos actuales si no se enviaron
+            $nombre = !empty($data['nombre'])           ? $data['nombre']           : $actual['nombre'];
+            $apPat  = !empty($data['apellido_paterno']) ? $data['apellido_paterno'] : $actual['apellido_paterno'];
+            $apMat  = !empty($data['apellido_materno']) ? $data['apellido_materno'] : $actual['apellido_materno'];
+            $tel    = isset($data['telefono'])          ? $data['telefono']         : $actual['telefono'];
 
-            // 3. Actualizar datos en Cliente o Empleado
-            // Intentamos actualizar en Cliente
-            $sqlC = "UPDATE cliente SET 
-                        nombre = :nom, 
-                        apellido_paterno = :ap1, 
-                        apellido_materno = :ap2, 
-                        telefono = :tel,
-                        direccion = :dir,
-                        ciudad = :ciu,
-                        estado = :est,
-                        codigo_postal = :cp
-                    WHERE id_usuario = :id";
-            
-            $stmtC = $this->db->prepare($sqlC);
-            $stmtC->execute([
-                ':nom' => $data['nombre'],
-                ':ap1' => $apPaterno,
-                ':ap2' => $apMaterno,
-                ':tel' => $data['telefono'] ?? null,
-                ':dir' => $data['direccion'] ?? null,
-                ':ciu' => $data['ciudad'] ?? null,
-                ':est' => $data['estado'] ?? null,
-                ':cp'  => $data['codigo_postal'] ?? null,
-                ':id'  => $id
-            ]);
-
-            // Si no se actualizó nada en cliente, intentamos en empleado
-            if ($stmtC->rowCount() == 0) {
-                $sqlE = "UPDATE empleado SET nombre = :nom, apellido_paterno = :ap1, apellido_materno = :ap2, telefono = :tel WHERE id_usuario = :id";
-                $this->db->prepare($sqlE)->execute([
-                    ':nom' => $data['nombre'],
-                    ':ap1' => $apPaterno,
-                    ':ap2' => $apMaterno,
-                    ':tel' => $data['telefono'] ?? null,
-                    ':id'  => $id
+            // 3. Actualizar Empleado si aplica
+            if ($esEmpleado) {
+                $this->db->prepare(
+                    "UPDATE Empleado SET
+                        nombre           = :nom,
+                        apellido_paterno = :ap1,
+                        apellido_materno = :ap2,
+                        telefono         = :tel,
+                        fotografia       = :foto
+                     WHERE id_empleado = :id_e"
+                )->execute([
+                    ':nom'  => $nombre,
+                    ':ap1'  => $apPat,
+                    ':ap2'  => $apMat,
+                    ':tel'  => $tel,
+                    ':foto' => $fotografia,
+                    ':id_e' => $actual['id_empleado'],
                 ]);
             }
 
-            $this->db->commit(); // Si todo salió bien, guardamos cambios
+            // 4. Actualizar Cliente si aplica
+            if ($esCliente) {
+                $this->db->prepare(
+                    "UPDATE Cliente SET
+                        nombre           = :nom,
+                        apellido_paterno = :ap1,
+                        apellido_materno = :ap2,
+                        telefono         = :tel,
+                        fotografia       = :foto
+                     WHERE id_cliente = :id_c"
+                )->execute([
+                    ':nom'  => $nombre,
+                    ':ap1'  => $apPat,
+                    ':ap2'  => $apMat,
+                    ':tel'  => $tel,
+                    ':foto' => $fotografia,
+                    ':id_c' => $actual['id_cliente'],
+                ]);
+            }
+
+            $this->db->commit();
             return true;
 
         } catch (Exception $e) {
-            $this->db->rollBack(); // Si algo falló, deshacemos todo
+            if ($this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
     }
+
     function borrar($id) {
-        $this->validarAcceso('usuario.eliminar');
+        $this->validarAcceso('usuario_eliminar');
         $this->conectar();
-        
-        $sql = "UPDATE Usuario SET estado_cuenta = 'eliminada' WHERE id_usuario = :id";
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "UPDATE Usuario SET estado_cuenta = 'eliminada' WHERE id_usuario = :id"
+        );
         $stmt->execute([':id' => $id]);
-        
         return $stmt->rowCount();
     }
-    
-    function login($email, $contrasena) {
-        $this->conectar();
-        $contrasena_md5 = md5($contrasena);
-        
-        $sql = "SELECT * FROM Usuario WHERE email = :email 
-            AND contrasena_hash = :pass 
-            AND estado_cuenta = 'activa'";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':email' => $email, ':pass' => $contrasena_md5]);
-        
-        $usuario = $stmt->fetch();
-        
-        if ($usuario) {
-            $_SESSION['id_usuario'] = $usuario['id_usuario'];
-            $_SESSION['nombre'] = $usuario['nombre'];
-            $_SESSION['apellidos'] = $usuario['apellidos'];
-            $_SESSION['email'] = $usuario['email'];
-            $_SESSION['rol'] = $usuario['rol'];
-            return true;
-        }
-        
-        return false;
-    }
-    
-    function logout() {
-        session_destroy();
-        header('Location: login.php');
-        exit;
-    }
-    
+
     private function emailExiste($email, $excluir_id = null) {
-        $this->conectar();
-        $sql = "SELECT COUNT(*) as existe FROM Usuario WHERE email = :email";
-        
-        if ($excluir_id) {
-            $sql .= " AND id_usuario != :id";
-        }
-        
+        $sql = "SELECT COUNT(*) FROM Usuario WHERE email = :email";
+        if ($excluir_id) $sql .= " AND id_usuario != :id";
         $stmt = $this->db->prepare($sql);
         $params = [':email' => $email];
-        
-        if ($excluir_id) {
-            $params[':id'] = $excluir_id;
-        }
-        
+        if ($excluir_id) $params[':id'] = $excluir_id;
         $stmt->execute($params);
-        return $stmt->fetch()['existe'] > 0;
+        return $stmt->fetchColumn() > 0;
     }
 }
-?>

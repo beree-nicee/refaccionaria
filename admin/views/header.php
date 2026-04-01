@@ -1,8 +1,7 @@
 <?php
 require_once(__DIR__."/../sistema.class.php");
 $_sys = new Sistema();
-?>
-<!doctype html>
+?><!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
@@ -156,7 +155,7 @@ $_sys = new Sistema();
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <!-- Mi perfil: cliente → cliente.php, empleado → empleado.php -->
                                 <li>
-                                    <a class="dropdown-item" href="<?= $_sys->esCliente() ? 'cliente.php' : 'empleado.php' ?>">
+                                    <a class="dropdown-item" href="<?= $_sys->esCliente() ? 'cliente.php' : 'empleado.php?accion=perfil' ?>">
                                         <i class="fas fa-user-edit fa-fw"></i> Mi perfil
                                     </a>
                                 </li>

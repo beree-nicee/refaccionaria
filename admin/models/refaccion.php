@@ -39,16 +39,20 @@ class Refaccion extends Sistema {
         $this->conectar();
         $data = $this->sanitizar($data);
 
-        // Validaciones
-        if (empty($data['nombre']))           throw new Exception("El nombre es obligatorio");
-        if (empty($data['codigo_producto']))  throw new Exception("El código de producto es obligatorio");
-        if (empty($data['precio']) || $data['precio'] < 0) throw new Exception("El precio debe ser mayor a 0");
-        if ($this->codigoExiste($data['codigo_producto'])) throw new Exception("El código de producto ya existe");
+        if (empty($data['nombre']))
+            throw new Exception("El nombre es obligatorio");
+        if (empty($data['codigo_producto']))
+            throw new Exception("El código de producto es obligatorio");
+        if (empty($data['precio']) || $data['precio'] < 0)
+            throw new Exception("El precio debe ser mayor a 0");
+        if ($this->codigoExiste($data['codigo_producto']))
+            throw new Exception("El código de producto ya existe");
 
-        // Subir imagen si viene
         $imagen = null;
         if (!empty($_FILES['imagen']['name'])) {
-            $imagen = $this->subirImagen($_FILES['imagen'], 'refacciones');
+            $extension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+            $nombreBase = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($data['nombre']));
+            $imagen = $this->subirImagenConNombre($_FILES['imagen'], 'refacciones', $nombreBase);
         }
 
         $sql = "INSERT INTO Refaccion
@@ -65,15 +69,15 @@ class Refaccion extends Sistema {
             ':id_cat'    => $data['id_categoria'],
             ':cod'       => $data['codigo_producto'],
             ':nom'       => $data['nombre'],
-            ':desc'      => $data['descripcion']             ?? null,
-            ':marca'     => $data['marca_refaccion']         ?? null,
-            ':precio'    => $data['precio'],
-            ':stock'     => $data['stock_actual']            ?? 0,
-            ':stock_min' => $data['stock_minimo']            ?? 5,
+            ':desc'      => !empty($data['descripcion'])               ? $data['descripcion']               : null,
+            ':marca'     => !empty($data['marca_refaccion'])           ? $data['marca_refaccion']           : null,
+            ':precio'    => !empty($data['precio'])                    ? $data['precio']                    : 0,
+            ':stock'     => $data['stock_actual']  !== ''              ? $data['stock_actual']              : 0,
+            ':stock_min' => $data['stock_minimo']  !== ''              ? $data['stock_minimo']              : 5,
             ':imagen'    => $imagen,
-            ':specs'     => $data['especificaciones_tecnicas'] ?? null,
-            ':peso'      => $data['peso']                    ?? null,
-            ':estado'    => $data['estado_producto']         ?? 'disponible',
+            ':specs'     => !empty($data['especificaciones_tecnicas']) ? $data['especificaciones_tecnicas'] : null,
+            ':peso'      => !empty($data['peso'])                      ? $data['peso']                      : null,
+            ':estado'    => !empty($data['estado_producto'])           ? $data['estado_producto']           : 'disponible',
         ]);
         return $stmt->rowCount();
     }
@@ -83,42 +87,47 @@ class Refaccion extends Sistema {
         $this->conectar();
         $data = $this->sanitizar($data);
 
-        if (empty($data['nombre']))          throw new Exception("El nombre es obligatorio");
-        if (empty($data['codigo_producto'])) throw new Exception("El código es obligatorio");
-        if ($this->codigoExiste($data['codigo_producto'], $id)) throw new Exception("El código ya lo usa otra refacción");
+        if (empty($data['nombre']))
+            throw new Exception("El nombre es obligatorio");
+        if (empty($data['codigo_producto']))
+            throw new Exception("El código es obligatorio");
+        if ($this->codigoExiste($data['codigo_producto'], $id))
+            throw new Exception("El código ya lo usa otra refacción");
 
-        // Obtener imagen actual
+        // Obtener datos actuales para conservar imagen
         $actual = $this->leerUno($id);
         $imagen = $actual['imagen'];
 
-        // Si sube nueva imagen
+        // Nueva imagen
         if (!empty($_FILES['imagen']['name'])) {
-            $nueva = $this->subirImagen($_FILES['imagen'], 'refacciones');
+            $extension = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
+            $nombreBase = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($data['nombre']));
+            $nueva = $this->subirImagenConNombre($_FILES['imagen'], 'refacciones', $nombreBase);
             if ($nueva) {
                 $this->eliminarImagen($imagen, 'refacciones');
                 $imagen = $nueva;
             }
         }
 
-        // Si marcó "eliminar imagen"
+        // Eliminar imagen si se marcó
         if (!empty($data['eliminar_imagen'])) {
             $this->eliminarImagen($imagen, 'refacciones');
             $imagen = null;
         }
 
         $sql = "UPDATE Refaccion SET
-                    id_categoria = :id_cat,
-                    codigo_producto = :cod,
-                    nombre = :nom,
-                    descripcion = :desc,
-                    marca_refaccion = :marca,
-                    precio = :precio,
-                    stock_actual = :stock,
-                    stock_minimo = :stock_min,
-                    imagen = :imagen,
+                    id_categoria              = :id_cat,
+                    codigo_producto           = :cod,
+                    nombre                    = :nom,
+                    descripcion               = :desc,
+                    marca_refaccion           = :marca,
+                    precio                    = :precio,
+                    stock_actual              = :stock,
+                    stock_minimo              = :stock_min,
+                    imagen                    = :imagen,
                     especificaciones_tecnicas = :specs,
-                    peso = :peso,
-                    estado_producto = :estado
+                    peso                      = :peso,
+                    estado_producto           = :estado
                 WHERE id_refaccion = :id";
 
         $stmt = $this->db->prepare($sql);
@@ -126,15 +135,15 @@ class Refaccion extends Sistema {
             ':id_cat'    => $data['id_categoria'],
             ':cod'       => $data['codigo_producto'],
             ':nom'       => $data['nombre'],
-            ':desc'      => $data['descripcion']               ?? null,
-            ':marca'     => $data['marca_refaccion']           ?? null,
-            ':precio'    => $data['precio'],
-            ':stock'     => $data['stock_actual']              ?? 0,
-            ':stock_min' => $data['stock_minimo']              ?? 5,
+            ':desc'      => !empty($data['descripcion'])               ? $data['descripcion']               : null,
+            ':marca'     => !empty($data['marca_refaccion'])           ? $data['marca_refaccion']           : null,
+            ':precio'    => !empty($data['precio'])                    ? $data['precio']                    : 0,
+            ':stock'     => $data['stock_actual']  !== ''              ? $data['stock_actual']              : 0,
+            ':stock_min' => $data['stock_minimo']  !== ''              ? $data['stock_minimo']              : 5,
             ':imagen'    => $imagen,
-            ':specs'     => $data['especificaciones_tecnicas'] ?? null,
-            ':peso'      => $data['peso']                      ?? null,
-            ':estado'    => $data['estado_producto']           ?? 'disponible',
+            ':specs'     => !empty($data['especificaciones_tecnicas']) ? $data['especificaciones_tecnicas'] : null,
+            ':peso'      => !empty($data['peso'])                      ? $data['peso']                      : null,
+            ':estado'    => !empty($data['estado_producto'])           ? $data['estado_producto']           : 'disponible',
             ':id'        => $id,
         ]);
         return $stmt->rowCount();
@@ -144,7 +153,6 @@ class Refaccion extends Sistema {
         $this->validarAcceso('refaccion_eliminar');
         $this->conectar();
 
-        // Eliminar imagen asociada
         $actual = $this->leerUno($id);
         if (!empty($actual['imagen'])) {
             $this->eliminarImagen($actual['imagen'], 'refacciones');
@@ -153,6 +161,25 @@ class Refaccion extends Sistema {
         $stmt = $this->db->prepare("DELETE FROM Refaccion WHERE id_refaccion = :id");
         $stmt->execute([':id' => $id]);
         return $stmt->rowCount();
+    }
+
+    function verificarStock($id_refaccion, $cantidad) {
+        $this->conectar();
+        $stmt = $this->db->prepare("SELECT stock_actual FROM Refaccion WHERE id_refaccion = :id");
+        $stmt->execute([':id' => $id_refaccion]);
+        $r = $stmt->fetch();
+        return $r && $r['stock_actual'] >= $cantidad;
+    }
+
+    function obtenerCompatibilidades($id_refaccion) {
+        $this->conectar();
+        $stmt = $this->db->prepare(
+            "SELECT * FROM Compatibilidad_Vehicular
+             WHERE id_refaccion = :id
+             ORDER BY marca_vehiculo, anio_inicio"
+        );
+        $stmt->execute([':id' => $id_refaccion]);
+        return $stmt->fetchAll();
     }
 
     private function codigoExiste($codigo, $excluir_id = null) {

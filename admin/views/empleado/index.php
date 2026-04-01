@@ -27,7 +27,11 @@
                         <tr>
                             <td><?php echo $r['id_empleado']; ?></td>
                             <td>
-                                <img src="uploads/empleados/<?php echo $r['fotografia'] ?? 'default.png'; ?>" width="40" class="rounded-circle">
+                                <img src="../uploads/empleados/<?= htmlspecialchars($r['fotografia'] ?? '') ?>"
+                                    width="40" height="40"
+                                    class="rounded-circle"
+                                    style="object-fit:cover"
+                                    onerror="this.src='../images/default-avatar.jpg'">
                             </td>
                             <td><?php echo $r['nombre'] . ' ' . $r['apellido_paterno'] . ' ' . $r['apellido_materno']; ?></td>
                             <td><?php echo $r['email']; ?></td>

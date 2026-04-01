@@ -33,6 +33,13 @@
 
                 <div class="mb-3">
                     <label class="form-label">Imagen del Servicio</label>
+                    <?php if (!empty($data['imagen_servicio'])): ?>
+                    <div class="mb-2">
+                        <img src="../uploads/servicios/<?= htmlspecialchars($data['imagen_servicio']) ?>" 
+                            class="img-thumbnail" style="width:100px;height:100px;object-fit:cover">
+                        <small class="text-muted ms-2">Imagen actual</small>
+                    </div>
+                    <?php endif; ?>
                     <input type="file" name="imagen_servicio" class="form-control" accept="image/*">
                 </div>
 

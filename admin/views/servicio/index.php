@@ -24,7 +24,7 @@
                         <tr><td colspan="6" class="text-center text-muted">No hay registros</td></tr>
                         <?php else: foreach($registros as $r): ?>
                         <tr>
-                            <td><img src="uploads/servicios/<?php echo $r['imagen_servicio'] ?? 'default.png'; ?>" width="50"></td>
+                            <td><img src="../uploads/servicios/<?= htmlspecialchars($r['imagen_servicio'] ?? 'default.jpg') ?>" width="150" onerror="this.style.display='none'"></td>
                             <td><strong><?php echo $r['nombre_servicio']; ?></strong></td>
                             <td>$<?php echo number_format($r['precio_mano_obra'], 2); ?></td>
                             <td><?php echo $r['tiempo_estimado']; ?> min</td>
