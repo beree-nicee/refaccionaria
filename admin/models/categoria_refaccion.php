@@ -96,4 +96,3 @@ class CategoriaRefaccion extends Sistema {
         return $stmt->rowCount();
     }
 }
-?>

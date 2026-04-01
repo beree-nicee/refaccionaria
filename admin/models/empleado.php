@@ -4,71 +4,79 @@ require_once(__DIR__."/../sistema.class.php");
 class Empleado extends Sistema {
 
     public function leer() {
+        $this->validarAcceso('empleado_leer');
         $this->conectar();
-        $sql = "SELECT e.*, u.email, r.rol
-                FROM Empleado e
-                INNER JOIN Usuario u ON e.id_usuario = u.id_usuario
-                INNER JOIN Rol r ON u.id_rol = r.id_rol
-                ORDER BY e.id_empleado DESC";
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "SELECT e.*, u.email, u.estado_cuenta, r.rol
+             FROM Empleado e
+             INNER JOIN Usuario u ON e.id_usuario = u.id_usuario
+             INNER JOIN Rol r    ON u.id_rol = r.id_rol
+             ORDER BY e.id_empleado DESC"
+        );
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll();
     }
 
     public function leerUno($id) {
         $this->conectar();
-        $sql = "SELECT e.*, u.email, u.id_rol
-                FROM Empleado e
-                INNER JOIN Usuario u ON e.id_usuario = u.id_usuario
-                WHERE e.id_empleado = :id";
-        $stmt = $this->db->prepare($sql);
+        $stmt = $this->db->prepare(
+            "SELECT e.*, u.email, u.id_rol, u.estado_cuenta
+             FROM Empleado e
+             INNER JOIN Usuario u ON e.id_usuario = u.id_usuario
+             WHERE e.id_empleado = :id"
+        );
         $stmt->execute([':id' => $id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetch();
     }
 
     public function crear($data) {
+        $this->validarAcceso('empleado_crear');
         $this->conectar();
+
+        $data = $this->sanitizar($data);
+        $this->_validarDatos($data, true);
+
+        // Foto fuera de la transacción
+        $fotografia = null;
+        if (!empty($_FILES['fotografia']['name']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
+            $base = !empty($data['rfc'])
+                ? preg_replace('/[^A-Z0-9]/', '_', strtoupper($data['rfc']))
+                : 'emp_' . time();
+            $fotografia = $this->subirImagenConNombre($_FILES['fotografia'], 'empleados', $base);
+        }
+
         $this->db->beginTransaction();
         try {
-            $data = $this->sanitizar($data);
-            // 1. Crear Usuario
-            $stmtU = $this->db->prepare(
+            $stmt = $this->db->prepare(
                 "INSERT INTO Usuario (email, contrasena_hash, id_rol, estado_cuenta)
                  VALUES (:email, :pass, :rol, 'activa')"
             );
-            $stmtU->execute([
+            $stmt->execute([
                 ':email' => $data['email'],
                 ':pass'  => md5($data['contrasena']),
                 ':rol'   => $data['id_rol'] ?? 2,
             ]);
             $id_usuario = $this->db->lastInsertId();
 
-            // 2. Subir foto usando RFC como nombre
-            $fotografia = null;
-            if (isset($_FILES['fotografia']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
-                $nombreBase = !empty($data['rfc'])
-                    ? preg_replace('/[^a-zA-Z0-9]/', '_', strtoupper($data['rfc']))
-                    : 'empleado_' . $id_usuario;
-                $fotografia = $this->subirImagenConNombre($_FILES['fotografia'], 'empleados', $nombreBase);
-            }
+            // Insertar en usuario_rol
+            $this->db->prepare("INSERT INTO usuario_rol (id_rol, id_usuario) VALUES (:rol, :usr)")
+                ->execute([':rol' => $data['id_rol'] ?? 2, ':usr' => $id_usuario]);
 
-            // 3. Crear Empleado
             $this->db->prepare(
                 "INSERT INTO Empleado
                     (id_usuario, nombre, apellido_paterno, apellido_materno,
                      rfc, curp, fecha_nacimiento, fotografia, telefono)
-                 VALUES
-                    (:id_u, :nom, :ap1, :ap2, :rfc, :curp, :fnac, :foto, :tel)"
+                 VALUES (:id_u,:nom,:ap1,:ap2,:rfc,:curp,:fnac,:foto,:tel)"
             )->execute([
                 ':id_u' => $id_usuario,
                 ':nom'  => $data['nombre'],
-                ':ap1'  => $data['apellido_paterno'],
-                ':ap2'  => $data['apellido_materno'],
-                ':rfc'  => !empty($data['rfc'])  ? $data['rfc']  : null,
-                ':curp' => !empty($data['curp']) ? $data['curp'] : null,
+                ':ap1'  => $data['apellido_paterno']  ?? null,
+                ':ap2'  => $data['apellido_materno']  ?? null,
+                ':rfc'  => !empty($data['rfc'])  ? strtoupper($data['rfc'])  : null,
+                ':curp' => !empty($data['curp']) ? strtoupper($data['curp']) : null,
                 ':fnac' => $data['fecha_nacimiento'],
                 ':foto' => $fotografia,
-                ':tel'  => !empty($data['telefono']) ? $data['telefono'] : null,
+                ':tel'  => $data['telefono'] ?? null,
             ]);
 
             $this->db->commit();
@@ -81,39 +89,39 @@ class Empleado extends Sistema {
 
     public function actualizar($id, $data) {
         $this->conectar();
-        $data = $this->sanitizar($data);
+        $data   = $this->sanitizar($data);
+        $actual = $this->leerUno($id);
 
-        // Obtener datos actuales ANTES de la transacción
-        $actual     = $this->leerUno($id);
-        $id_usuario = $actual['id_usuario'];
-
-        // Manejar RFC/CURP: solo admin editando a otro puede cambiarlos
         $esPropio     = ((int)$actual['id_usuario'] === (int)$this->obtenerIdUsuario());
         $puedeRFCCURP = $this->esAdmin() && !$esPropio;
-        $rfc  = $puedeRFCCURP ? (!empty($data['rfc'])  ? $data['rfc']  : null) : $actual['rfc'];
-        $curp = $puedeRFCCURP ? (!empty($data['curp']) ? $data['curp'] : null) : $actual['curp'];
 
-        // Subir foto fuera de la transacción
+        $this->_validarDatos($data, false, $puedeRFCCURP);
+
+        // Foto fuera de la transacción
         $fotografia = $actual['fotografia'];
-        if (isset($_FILES['fotografia']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
+        if (!empty($_FILES['fotografia']['name']) && $_FILES['fotografia']['error'] === UPLOAD_ERR_OK) {
+            $rfc  = $puedeRFCCURP ? ($data['rfc'] ?? $actual['rfc']) : $actual['rfc'];
+            $base = !empty($rfc)
+                ? preg_replace('/[^A-Z0-9]/', '_', strtoupper($rfc))
+                : 'emp_' . $actual['id_usuario'];
             if ($fotografia) $this->eliminarImagen($fotografia, 'empleados');
-            $nombreBase = !empty($rfc)
-                ? preg_replace('/[^a-zA-Z0-9]/', '_', strtoupper($rfc))
-                : 'empleado_' . $id_usuario;
-            $fotografia = $this->subirImagenConNombre($_FILES['fotografia'], 'empleados', $nombreBase);
+            $fotografia = $this->subirImagenConNombre($_FILES['fotografia'], 'empleados', $base);
         }
+
+        $rfc  = $puedeRFCCURP ? (!empty($data['rfc'])  ? strtoupper($data['rfc'])  : null) : $actual['rfc'];
+        $curp = $puedeRFCCURP ? (!empty($data['curp']) ? strtoupper($data['curp']) : null) : $actual['curp'];
 
         $this->db->beginTransaction();
         try {
-            // 1. Actualizar Usuario
+            // Actualizar Usuario
             $sqlU    = "UPDATE Usuario SET email = :email"
                      . (!empty($data['contrasena']) ? ", contrasena_hash = :pass" : "")
-                     . " WHERE id_usuario = :id_u";
-            $paramsU = [':email' => $data['email'], ':id_u' => $id_usuario];
+                     . " WHERE id_usuario = :id";
+            $paramsU = [':email' => $data['email'], ':id' => $actual['id_usuario']];
             if (!empty($data['contrasena'])) $paramsU[':pass'] = md5($data['contrasena']);
             $this->db->prepare($sqlU)->execute($paramsU);
 
-            // 2. Actualizar Empleado
+            // Actualizar Empleado
             $this->db->prepare(
                 "UPDATE Empleado SET
                     nombre           = :nom,
@@ -124,17 +132,17 @@ class Empleado extends Sistema {
                     fecha_nacimiento = :fnac,
                     fotografia       = :foto,
                     telefono         = :tel
-                 WHERE id_empleado = :id_e"
+                 WHERE id_empleado = :id"
             )->execute([
                 ':nom'  => $data['nombre'],
-                ':ap1'  => $data['apellido_paterno'],
-                ':ap2'  => $data['apellido_materno'],
+                ':ap1'  => $data['apellido_paterno'] ?? $actual['apellido_paterno'],
+                ':ap2'  => $data['apellido_materno'] ?? $actual['apellido_materno'],
                 ':rfc'  => $rfc,
                 ':curp' => $curp,
-                ':fnac' => $data['fecha_nacimiento'],
+                ':fnac' => $data['fecha_nacimiento'] ?? $actual['fecha_nacimiento'],
                 ':foto' => $fotografia,
                 ':tel'  => !empty($data['telefono']) ? $data['telefono'] : null,
-                ':id_e' => $id,
+                ':id'   => $id,
             ]);
 
             $this->db->commit();
@@ -146,16 +154,43 @@ class Empleado extends Sistema {
     }
 
     public function borrar($id) {
+        $this->validarAcceso('empleado_eliminar');
         $this->conectar();
         $actual = $this->leerUno($id);
         if (!empty($actual['fotografia']))
             $this->eliminarImagen($actual['fotografia'], 'empleados');
-        return $this->db->prepare("DELETE FROM Usuario WHERE id_usuario = :id_u")
+        return $this->db->prepare("DELETE FROM Usuario WHERE id_usuario = :id")
             ->execute([':id_u' => $actual['id_usuario']]);
     }
 
     public function obtenerRoles() {
         $this->conectar();
-        return $this->db->query("SELECT * FROM Rol")->fetchAll(PDO::FETCH_ASSOC);
+        return $this->db->query("SELECT * FROM Rol ORDER BY rol")->fetchAll();
+    }
+
+    // =============================================
+    // VALIDACIONES INTERNAS
+    // =============================================
+    private function _validarDatos($data, $esNuevo = false, $validarRFCCURP = true) {
+        if (empty($data['nombre']))
+            throw new Exception("El nombre es obligatorio");
+
+        if (!$this->validarEmail($data['email'] ?? ''))
+            throw new Exception("El correo electrónico no es válido");
+
+        if ($esNuevo || !empty($data['contrasena'])) {
+            if (!$this->validarContrasena($data['contrasena'] ?? ''))
+                throw new Exception("La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial");
+        }
+
+        if (!empty($data['telefono']) && !$this->validarTelefono($data['telefono']))
+            throw new Exception("El teléfono debe tener 10 dígitos");
+
+        if ($validarRFCCURP) {
+            if (!empty($data['rfc']) && !$this->validarRFC($data['rfc']))
+                throw new Exception("El RFC no tiene el formato correcto (ej: GARC901231ABC)");
+            if (!empty($data['curp']) && !$this->validarCURP($data['curp']))
+                throw new Exception("El CURP no tiene el formato correcto");
+        }
     }
 }

@@ -5,7 +5,8 @@ class Paquete extends Sistema {
 
     function leer() {
         $this->conectar();
-        $stmt = $this->db->prepare("SELECT * FROM Paquete_Reparacion ORDER BY id_paquete DESC");
+        $sql = "SELECT * FROM Paquete_Reparacion ORDER BY id_paquete DESC";
+        $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -32,10 +33,10 @@ class Paquete extends Sistema {
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             ':nombre'    => $data['nombre_paquete'],
-            ':desc'      => $data['descripcion']          ?? null,
+            ':desc'      => $data['descripcion']        ?? null,
             ':descuento' => $data['descuento_porcentaje'] ?? 0,
             ':imagen'    => $imagen,
-            ':estado'    => $data['estado']               ?? 'activo',
+            ':estado'    => $data['estado']             ?? 'activo',
         ]);
     }
 
@@ -44,9 +45,11 @@ class Paquete extends Sistema {
         $data = $this->sanitizar($data);
         $this->conectar();
 
+        // Obtener datos actuales para conservar imagen
         $actual = $this->leerUno($id);
         $imagen = $actual['imagen_paquete'];
 
+        // Nueva imagen
         if (isset($_FILES['imagen_paquete']) && $_FILES['imagen_paquete']['error'] === UPLOAD_ERR_OK) {
             $nueva = $this->subirImagen($_FILES['imagen_paquete'], 'paquetes');
             if ($nueva) {
@@ -55,6 +58,7 @@ class Paquete extends Sistema {
             }
         }
 
+        // Eliminar imagen si se marcó
         if (!empty($data['eliminar_imagen'])) {
             $this->eliminarImagen($imagen, 'paquetes');
             $imagen = null;
@@ -92,4 +96,3 @@ class Paquete extends Sistema {
         return false;
     }
 }
-?>

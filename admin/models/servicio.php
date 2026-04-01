@@ -43,8 +43,7 @@ class Servicio extends Sistema {
 
         $imagen = null;
         if (isset($_FILES['imagen_servicio']) && $_FILES['imagen_servicio']['error'] === UPLOAD_ERR_OK) {
-            $nombreBase = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($data['nombre_servicio']));
-            $imagen = $this->subirImagenConNombre($_FILES['imagen_servicio'], 'servicios', $nombreBase);
+            $imagen = $this->subirImagen($_FILES['imagen_servicio'], 'servicios');
         }
 
         $sql = "INSERT INTO Servicio (nombre_servicio, descripcion, precio_mano_obra,
@@ -53,12 +52,12 @@ class Servicio extends Sistema {
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             ':nombre'    => $data['nombre_servicio'],
-            ':desc'      => $data['descripcion']        ?? null,
+            ':desc'      => $data['descripcion']       ?? null,
             ':precio'    => $data['precio_mano_obra'],
-            ':tiempo'    => $data['tiempo_estimado']    ?? null,
+            ':tiempo'    => $data['tiempo_estimado']   ?? null,
             ':imagen'    => $imagen,
             ':categoria' => $data['categoria_servicio'] ?? null,
-            ':estado'    => $data['estado']             ?? 'activo',
+            ':estado'    => $data['estado']            ?? 'activo',
         ]);
         return $stmt->rowCount();
     }
@@ -68,18 +67,20 @@ class Servicio extends Sistema {
         $data = $this->sanitizar($data);
         $this->conectar();
 
+        // Obtener datos actuales para no perder campos no enviados
         $actual = $this->leerUno($id);
         $imagen = $actual['imagen_servicio'];
 
+        // Nueva imagen
         if (isset($_FILES['imagen_servicio']) && $_FILES['imagen_servicio']['error'] === UPLOAD_ERR_OK) {
-            $nombreBase = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($data['nombre_servicio']));
-            $nueva = $this->subirImagenConNombre($_FILES['imagen_servicio'], 'servicios', $nombreBase);
+            $nueva = $this->subirImagen($_FILES['imagen_servicio'], 'servicios');
             if ($nueva) {
                 $this->eliminarImagen($imagen, 'servicios');
                 $imagen = $nueva;
             }
         }
 
+        // Eliminar imagen si se marcó
         if (!empty($data['eliminar_imagen'])) {
             $this->eliminarImagen($imagen, 'servicios');
             $imagen = null;
@@ -96,13 +97,13 @@ class Servicio extends Sistema {
                 WHERE id_servicio = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            ':nombre'    => $data['nombre_servicio']    ?? $actual['nombre_servicio'],
-            ':desc'      => $data['descripcion']        ?? $actual['descripcion'],
-            ':precio'    => $data['precio_mano_obra']   ?? $actual['precio_mano_obra'],
-            ':tiempo'    => $data['tiempo_estimado']    ?? $actual['tiempo_estimado'],
+            ':nombre'    => $data['nombre_servicio']   ?? $actual['nombre_servicio'],
+            ':desc'      => $data['descripcion']       ?? $actual['descripcion'],
+            ':precio'    => $data['precio_mano_obra']  ?? $actual['precio_mano_obra'],
+            ':tiempo'    => $data['tiempo_estimado']   ?? $actual['tiempo_estimado'],
             ':imagen'    => $imagen,
             ':categoria' => $data['categoria_servicio'] ?? $actual['categoria_servicio'],
-            ':estado'    => $data['estado']             ?? $actual['estado'],
+            ':estado'    => $data['estado']            ?? $actual['estado'],
             ':id'        => $id,
         ]);
         return $stmt->rowCount();
@@ -120,4 +121,3 @@ class Servicio extends Sistema {
         return $stmt->rowCount();
     }
 }
-?>

@@ -60,4 +60,3 @@ class RolPermiso extends Sistema {
         return $stmt->fetchAll();
     }
 }
-?>

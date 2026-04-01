@@ -125,7 +125,7 @@ $puedeRFCCURP = $app->esAdmin() && !$esPropio;
                     <label class="form-label fw-semibold">Fotografía</label>
                     <?php if (!empty($data['fotografia'])): ?>
                     <div class="mb-2">
-                        <img src="uploads/empleados/<?= htmlspecialchars($data['fotografia']) ?>"
+                        <img src="../uploads/empleados/<?= htmlspecialchars($data['fotografia']) ?>"
                              class="rounded border" style="width:80px;height:80px;object-fit:cover">
                         <small class="text-muted ms-2">Foto actual</small>
                     </div>
