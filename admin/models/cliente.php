@@ -58,7 +58,6 @@ class Cliente extends Sistema {
             $id_rol          = $this->obtenerIdRolCliente();
             $contrasena_hash = md5($data['contrasena']);
 
-            // 1. Crear Usuario
             $stmt = $this->db->prepare(
                 "INSERT INTO Usuario (email, contrasena_hash, id_rol, estado_cuenta)
                  VALUES (:email, :hash, :id_rol, 'activa')"
@@ -70,11 +69,9 @@ class Cliente extends Sistema {
             ]);
             $id_usuario = $this->db->lastInsertId();
 
-            // 2. Insertar en usuario_rol
             $this->db->prepare("INSERT INTO usuario_rol (id_rol, id_usuario) VALUES (:id_rol, :id_usuario)")
                 ->execute([':id_rol' => $id_rol, ':id_usuario' => $id_usuario]);
 
-            // 3. Crear Cliente
             $this->db->prepare(
                 "INSERT INTO Cliente
                     (id_usuario, nombre, apellido_paterno, apellido_materno,
@@ -113,15 +110,27 @@ class Cliente extends Sistema {
     }
 
     function actualizar($id_cliente, $data) {
-        $this->validarAcceso('cliente_editar');
+        // Cliente siempre puede editar su propio perfil
+        // Admin/técnico necesitan permiso
+        if (!$this->esCliente()) {
+            $this->validarAcceso('cliente_editar');
+        }
+
         $this->conectar();
+
+        // Obtener datos ANTES de la transacción
+        $actual = $this->leerUno($id_cliente);
+        if (!$actual) throw new Exception("Cliente no encontrado");
+
+        // Cliente solo puede editar su propio perfil
+        if ($this->esCliente() && (int)$actual['id_usuario'] !== (int)$this->obtenerIdUsuario()) {
+            throw new Exception("No tienes permiso para editar este perfil");
+        }
+
+        $id_usuario = $actual['id_usuario'];
         $this->db->beginTransaction();
 
         try {
-            $actual     = $this->leerUno($id_cliente);
-            if (!$actual) throw new Exception("Cliente no encontrado");
-            $id_usuario = $actual['id_usuario'];
-
             // Actualizar email si cambió
             if ($actual['email'] !== $data['email']) {
                 $chk = $this->db->prepare(
@@ -166,7 +175,7 @@ class Cliente extends Sistema {
             return true;
 
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
     }
@@ -186,4 +195,3 @@ class Cliente extends Sistema {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-?>
