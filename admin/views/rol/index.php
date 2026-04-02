@@ -1,4 +1,8 @@
-<div class="container mt-4">
+<?php 
+echo "<pre>"; 
+print_r($registros[0]); 
+echo "</pre>"; 
+?><div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2><i class="fas fa-user-tag"></i> Roles del Sistema</h2>
         <?php if($app->verificarPermiso('rol.crear')): ?>
@@ -25,7 +29,9 @@
                             <td><?= $r['id_rol'] ?></td>
                             <td><span class="badge bg-secondary fs-6"><?= ucfirst($r['rol']) ?></span></td>
                             <td class="text-center">
-                                <span class="badge bg-info text-dark"><?= $r['total_permisos'] ?> permisos</span>
+                                <span class="badge bg-info text-dark">
+                                    <?= (isset($r['total_permisos']) ? $r['total_permisos'] : ($r['TOTAL_PERMISOS'] ?? 0)) ?> permisos
+                                </span>
                             </td>
                             <td class="text-end">
                                 <div class="btn-group btn-group-sm pe-2">

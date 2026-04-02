@@ -20,7 +20,7 @@
                     <tr>
                         <td><span class="badge bg-secondary fs-6"><?= ucfirst($r['rol']) ?></span></td>
                         <td class="text-center">
-                            <span class="badge bg-info text-dark"><?= $r['total'] ?></span>
+                            <span class="badge bg-info text-dark"><?= $r['total_permisos'] ?? 0 ?></span>
                         </td>
                         <td>
                             <small class="text-muted">

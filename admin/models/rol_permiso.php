@@ -48,15 +48,15 @@ class RolPermiso extends Sistema {
         $this->validarAcceso('rol_permiso_gestionar');
         $this->conectar();
         $sql = "SELECT r.id_rol, r.rol,
-                       GROUP_CONCAT(p.permiso ORDER BY p.permiso SEPARATOR ', ') as permisos,
-                       COUNT(rp.id_permiso) as total
+                    COUNT(rp.id_permiso) as total_permisos,
+                    GROUP_CONCAT(p.permiso SEPARATOR ', ') as permisos
                 FROM Rol r
                 LEFT JOIN Rol_Permiso rp ON r.id_rol = rp.id_rol
                 LEFT JOIN Permiso p ON rp.id_permiso = p.id_permiso
-                GROUP BY r.id_rol
-                ORDER BY r.rol";
+                GROUP BY r.id_rol, r.rol
+                ORDER BY r.id_rol";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }

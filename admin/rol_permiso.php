@@ -2,9 +2,11 @@
 require_once(__DIR__."/sistema.class.php");
 require_once(__DIR__."/models/rol_permiso.php");
 require_once(__DIR__."/models/rol.php");
+require_once(__DIR__."/models/permiso.php");
 
 $app    = new RolPermiso();
 $appRol = new Rol();
+$appPermiso = new Permiso();
 $app->requiereLogin();
 
 $id_rol = $_GET['id_rol'] ?? null;
@@ -29,7 +31,7 @@ if (isset($error))           $app->alerta("danger",  $error);
 
 switch ($accion) {
     case 'editar':
-        $rol              = $appRol->leerUno($id_rol);
+        $rol= $appRol->leerUno($id_rol);
         $permisosAsignados = $app->obtenerPermisosDeRol($id_rol);
         $todosPermisos    = $app->obtenerTodosPermisos();
         require(__DIR__."/views/rol_permiso/formulario.php");

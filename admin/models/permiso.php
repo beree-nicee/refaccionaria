@@ -6,7 +6,13 @@ class Permiso extends Sistema {
     function leer() {
         $this->validarAcceso('permiso_leer');
         $this->conectar();
-        $stmt = $this->db->prepare("SELECT * FROM Permiso ORDER BY permiso");
+        $stmt = $this->db->prepare("SELECT 
+                p.id_permiso, 
+                p.permiso, 
+                COUNT(rp.id_rol) AS total_roles
+            FROM Permiso p
+            LEFT JOIN Rol_Permiso rp ON p.id_permiso = rp.id_permiso
+            GROUP BY p.id_permiso, p.permiso;");
         $stmt->execute();
         return $stmt->fetchAll();
     }

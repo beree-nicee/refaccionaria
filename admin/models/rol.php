@@ -6,9 +6,22 @@ class Rol extends Sistema {
     function leer() {
         $this->validarAcceso('rol_leer');
         $this->conectar();
-        $stmt = $this->db->prepare("SELECT * FROM Rol ORDER BY rol");
+        
+        // Esta consulta trae el Rol Y cuenta cuántos permisos tiene en la tabla Rol_Permiso
+        $sql = "SELECT 
+                    r.id_rol, 
+                    r.rol, 
+                    COUNT(rp.id_permiso) AS total_permisos
+                FROM Rol r
+                LEFT JOIN Rol_Permiso rp ON r.id_rol = rp.id_rol
+                GROUP BY r.id_rol, r.rol
+                ORDER BY r.rol ASC";
+                
+        $stmt = $this->db->prepare($sql);
         $stmt->execute();
-        return $stmt->fetchAll();
+        
+        // Usamos FETCH_ASSOC para que las llaves coincidan con tu vista
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     function leerUno($id) {
